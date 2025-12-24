@@ -1,0 +1,23 @@
+# data & artifacts
+/data/
+/models/
+mlruns/
+
+# python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# virtual environments
+.venv/
+venv/
+
+# notebooks (keep notebooks, ignore checkpoints)
+notebooks/.ipynb_checkpoints/
+
+# logs
+*.log
+
+# OS junk
+.DS_Store

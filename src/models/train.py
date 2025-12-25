@@ -7,6 +7,9 @@ from typing import Any, Dict, Tuple
 import joblib
 import numpy as np
 import lightgbm as lgb
+import mlflow
+import mlflow.lightgbm
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 
@@ -99,96 +102,130 @@ def train_best_model(
         target_fpr,
     )
 
-    train_df, test_df = load_kaggle_data(data_dir)
-    x_train, y, _ = make_xy(train_df, test_df)
+    # Set MLflow experiment (creates it if it does not exist)
+    mlflow.set_experiment("loan_payback_training")
 
-    spec = split_features(train_df)
-    preprocessor = build_preprocessor_ohe(spec.categorical)
+    # One MLflow run = one training execution
+    with mlflow.start_run() as run:
+        # Unique ID of this training run (used to locate model + metrics later)
+        run_id = run.info.run_id
+        logger.info("MLflow run_id=%s", run_id)
 
-    x_proc = preprocessor.fit_transform(x_train)
-    dtrain = lgb.Dataset(x_proc, label=y)
+        # Data loading
+        train_df, test_df = load_kaggle_data(data_dir)
+        x_train, y, _ = make_xy(train_df, test_df)
 
-    lgb_params = {
-        "objective": "binary",
-        "metric": "auc",
-        "learning_rate": 0.1,
-        "max_depth": 6,
-        "lambda_l2": 0.5,
-        "subsample": 0.8,
-        "colsample_bytree": 0.6,
-        "num_leaves": 60,
-        "min_data_in_leaf": 45,
-        "verbose": -1,
-        "seed": seed,
-    }
+        # Preprocessing
+        spec = split_features(train_df)
+        preprocessor = build_preprocessor_ohe(spec.categorical)
 
-    cv_res = lgb.cv(
-        lgb_params,
-        dtrain,
-        num_boost_round=5000,
-        nfold=5,
-        stratified=True,
-        shuffle=True,
-        seed=seed,
-        callbacks=[
-            lgb.early_stopping(stopping_rounds=50),
-            lgb.log_evaluation(period=50),
-        ],
-    )
+        x_proc = preprocessor.fit_transform(x_train)
+        dtrain = lgb.Dataset(x_proc, label=y)
 
-    best_iter = len(cv_res["valid auc-mean"])
-    logger.info("CV finished. best_iter=%s", best_iter)
+        # Model parameters
+        lgb_params = {
+            "objective": "binary",
+            "metric": "auc",
+            "learning_rate": 0.1,
+            "max_depth": 6,
+            "lambda_l2": 0.5,
+            "subsample": 0.8,
+            "colsample_bytree": 0.6,
+            "num_leaves": 60,
+            "min_data_in_leaf": 45,
+            "verbose": -1,
+            "seed": seed,
+        }
 
-    model = lgb.train(lgb_params, dtrain, num_boost_round=best_iter)
+        # Log parameters to MLflow
+        mlflow.log_params(lgb_params)
+        mlflow.log_param("target_fpr", target_fpr)
 
-    _, x_thr_val, _, y_thr_val = train_test_split(
-        x_train,
-        y,
-        test_size=0.20,
-        random_state=seed,
-        stratify=y,
-    )
+        # Cross-validation
+        cv_res = lgb.cv(
+            lgb_params,
+            dtrain,
+            num_boost_round=5000,
+            nfold=5,
+            stratified=True,
+            shuffle=True,
+            seed=seed,
+            callbacks=[
+                lgb.early_stopping(stopping_rounds=50),
+                lgb.log_evaluation(period=50),
+            ],
+        )
 
-    x_thr_val_proc = preprocessor.transform(x_thr_val)
-    y_thr_score = model.predict(x_thr_val_proc)
+        best_iter = len(cv_res["valid auc-mean"])
+        mlflow.log_param("best_iter", best_iter)
 
-    best_thr, thr_info = find_threshold_by_target_fpr(
-        y_true=y_thr_val,
-        y_score=y_thr_score,
-        target_fpr=target_fpr,
-    )
+        logger.info("CV finished. best_iter=%s", best_iter)
 
-    logger.info(
-        "Threshold selected. threshold=%.6f achieved_fpr=%.6f (target_fpr=%.4f)",
-        best_thr,
-        thr_info["FPR"],
-        target_fpr,
-    )
+        # Final training
+        model = lgb.train(lgb_params, dtrain, num_boost_round=best_iter)
 
-    bundle = {
-        "model": model,
-        "preprocessor": preprocessor,
-        "threshold": best_thr,
-        "meta": {
-            "target_col": TARGET_COL,
-            "id_col": ID_COL,
-            "best_iter": best_iter,
-            "threshold_info": thr_info,
-            "categorical_features": spec.categorical,
-            "numeric_features": spec.numeric,
-            "lgb_params": lgb_params,
-        },
-    }
+        # Threshold selection
+        _, x_thr_val, _, y_thr_val = train_test_split(
+            x_train,
+            y,
+            test_size=0.20,
+            random_state=seed,
+            stratify=y,
+        )
 
-    out_path = model_dir_path / artifact_name
-    logger.info("Saving model bundle to: %s", out_path)
-    joblib.dump(bundle, out_path)
-    logger.info("Train finished.")
+        x_thr_val_proc = preprocessor.transform(x_thr_val)
+        y_thr_score = model.predict(x_thr_val_proc)
 
-    return out_path
+        best_thr, thr_info = find_threshold_by_target_fpr(
+            y_true=y_thr_val,
+            y_score=y_thr_score,
+            target_fpr=target_fpr,
+        )
+
+        logger.info(
+            "Threshold selected. threshold=%.6f achieved_fpr=%.6f",
+            best_thr,
+            thr_info["FPR"],
+        )
+
+        # Log metrics to MLflow
+        mlflow.log_metric("threshold", best_thr)
+        mlflow.log_metric("FPR", thr_info["FPR"])
+        mlflow.log_metric("TP", thr_info["TP"])
+        mlflow.log_metric("FP", thr_info["FP"])
+        mlflow.log_metric("TN", thr_info["TN"])
+        mlflow.log_metric("FN", thr_info["FN"])
+
+        # Save model bundle
+        bundle = {
+            "model": model,
+            "preprocessor": preprocessor,
+            "threshold": best_thr,
+            "meta": {
+                "target_col": TARGET_COL,
+                "id_col": ID_COL,
+                "best_iter": best_iter,
+                "threshold_info": thr_info,
+                "categorical_features": spec.categorical,
+                "numeric_features": spec.numeric,
+                "lgb_params": lgb_params,
+                "run_id": run_id,
+            },
+        }
+
+        out_path = model_dir_path / artifact_name
+        joblib.dump(bundle, out_path)
+
+        (model_dir_path / "latest_run.txt").write_text(run_id, encoding="utf-8")
+
+        # Log model artifact to MLflow
+        mlflow.log_artifact(str(out_path), artifact_path="model")
+
+        logger.info("Train finished. Model saved to %s", out_path)
+
+        return out_path
 
 
 if __name__ == "__main__":
     path = train_best_model()
     logger.info("Saved: %s", path)
-

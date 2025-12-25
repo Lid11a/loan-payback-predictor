@@ -1,7 +1,16 @@
 # data & artifacts
 /data/
 /models/
+
+# IDE
+.idea/
+
+# Jupyter
+notebooks/.ipynb_checkpoints/
+
+# MLflow
 mlruns/
+mlflow.db
 
 # python cache
 __pycache__/
@@ -12,9 +21,6 @@ __pycache__/
 # virtual environments
 .venv/
 venv/
-
-# notebooks (keep notebooks, ignore checkpoints)
-notebooks/.ipynb_checkpoints/
 
 # logs
 *.log

@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+addopts = "--cov=src --cov-report=term-missing"
+
+[tool.coverage.run]
+omit = [
+  "src/models/promote.py",
+  "src/models/train_baseline.py",
+  "src/models/train_holdout.py",
+]

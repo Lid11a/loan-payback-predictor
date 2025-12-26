@@ -107,3 +107,18 @@ def test_predict_batch_ok(client: TestClient) -> None:
     assert "results" in data
     assert len(data["results"]) == 2
     assert data["results"][0]["threshold"] == 0.5
+
+def test_predict_batch_empty_items(client):
+    r = client.post("/predict_batch", json={"items": []})
+    assert r.status_code == 400
+
+
+def test_features_when_model_not_loaded(monkeypatch):
+    import src.api.app as app_module
+    from fastapi.testclient import TestClient
+
+    # force "model not loaded"
+    monkeypatch.setattr(app_module, "load_bundle", lambda *a, **k: (_ for _ in ()).throw(Exception("fail")))
+    with TestClient(app_module.app) as c:
+        r = c.get("/features")
+        assert r.status_code == 503

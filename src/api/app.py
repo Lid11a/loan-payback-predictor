@@ -18,6 +18,7 @@ app = FastAPI(title="Loan Payback Prediction API", version="0.1.0")
 # Global variables for the loaded model bundle
 BUNDLE: Dict[str, Any] | None = None
 FEATURES: List[str] = []
+ACTIVE_RUN_ID: str | None = None
 
 
 class PredictRequest(BaseModel):
@@ -90,6 +91,21 @@ def get_expected_features(bundle: Dict[str, Any]) -> List[str]:
     return list(categorical) + list(numeric)
 
 
+def load_active_run_id(path: str | Path = "models/latest_run.txt") -> str | None:
+    """
+    The function loads the active MLflow run_id from disk.
+
+    Returns run_id as a string if the file exists and is non-empty.
+    Otherwise, returns None.
+    """
+    p = Path(path)
+    if not p.exists():
+        return None
+
+    run_id = p.read_text(encoding="utf-8").strip()
+    return run_id or None
+
+
 def get_proba(bundle: Dict[str, Any], x_proc: Any) -> float:
     """
     The function extracts a probability from the model output.
@@ -117,11 +133,12 @@ def startup_event() -> None:
     """
     The function loads the model bundle at application startup.
     """
-    global BUNDLE, FEATURES
+    global BUNDLE, FEATURES, ACTIVE_RUN_ID
 
     try:
         BUNDLE = load_bundle("models/best_model.joblib")
         FEATURES = get_expected_features(BUNDLE)
+        ACTIVE_RUN_ID = load_active_run_id("models/latest_run.txt")
 
         logger.info(
             "API startup: model loaded. threshold=%.6f features=%s",
@@ -132,6 +149,7 @@ def startup_event() -> None:
         # The API can still start, but /ready will show it's not ready
         BUNDLE = None
         FEATURES = []
+        ACTIVE_RUN_ID = None
         logger.exception("API startup: failed to load model. error=%s", e)
 
 
@@ -151,6 +169,7 @@ def ready() -> Dict[str, Any]:
     return {
         "model_loaded": BUNDLE is not None,
         "n_features_expected": len(FEATURES),
+        "active_run_id": ACTIVE_RUN_ID,
     }
 
 

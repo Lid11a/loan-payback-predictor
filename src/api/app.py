@@ -1,6 +1,7 @@
 # src/api/app.py
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -12,8 +13,6 @@ from pydantic import BaseModel, Field
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-app = FastAPI(title="Loan Payback Prediction API", version="0.1.0")
 
 # Global variables for the loaded model bundle
 BUNDLE: Dict[str, Any] | None = None
@@ -128,31 +127,50 @@ def get_proba(bundle: Dict[str, Any], x_proc: Any) -> float:
     return proba
 
 
-@app.on_event("startup")
-def startup_event() -> None:
+def _load_model_to_globals() -> None:
     """
-    The function loads the model bundle at application startup.
+    The function loads model bundle and fills global variables.
+    """
+    global BUNDLE, FEATURES, ACTIVE_RUN_ID
+
+    BUNDLE = load_bundle("models/best_model.joblib")
+    FEATURES = get_expected_features(BUNDLE)
+    ACTIVE_RUN_ID = load_active_run_id("models/latest_run.txt")
+
+    logger.info(
+        "API startup: model loaded. threshold=%.6f features=%s active_run_id=%s",
+        float(BUNDLE["threshold"]),
+        len(FEATURES),
+        ACTIVE_RUN_ID,
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    The lifespan context handles startup and shutdown events.
+
+    Startup: loads the model bundle into memory.
+    Shutdown: currently no cleanup is required.
     """
     global BUNDLE, FEATURES, ACTIVE_RUN_ID
 
     try:
-        BUNDLE = load_bundle("models/best_model.joblib")
-        FEATURES = get_expected_features(BUNDLE)
-        ACTIVE_RUN_ID = load_active_run_id("models/latest_run.txt")
-
-        logger.info(
-            "API startup: model loaded. threshold=%.6f features=%s active_run_id=%s",
-            float(BUNDLE["threshold"]),
-            len(FEATURES),
-            ACTIVE_RUN_ID,
-        )
-
+        _load_model_to_globals()
     except Exception as e:
-        # The API can still start, but /ready will show it's not ready
         BUNDLE = None
         FEATURES = []
         ACTIVE_RUN_ID = None
         logger.exception("API startup: failed to load model. error=%s", e)
+
+    yield
+
+
+app = FastAPI(
+    title="Loan Payback Prediction API",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 
 @app.get("/health")
@@ -197,7 +215,6 @@ def predict(req: PredictRequest) -> PredictResponse:
     if BUNDLE is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. Check /ready.")
 
-    # Validate that the request contains exactly the required features
     req_keys = set(req.features.keys())
     expected_keys = set(FEATURES)
 
@@ -243,7 +260,6 @@ def predict_batch(req: PredictBatchRequest) -> PredictBatchResponse:
 
     expected_keys = set(FEATURES)
 
-    # Validate feature sets for all items first
     for i, feats in enumerate(req.items):
         req_keys = set(feats.keys())
         missing = sorted(list(expected_keys - req_keys))

@@ -141,10 +141,12 @@ def startup_event() -> None:
         ACTIVE_RUN_ID = load_active_run_id("models/latest_run.txt")
 
         logger.info(
-            "API startup: model loaded. threshold=%.6f features=%s",
+            "API startup: model loaded. threshold=%.6f features=%s active_run_id=%s",
             float(BUNDLE["threshold"]),
             len(FEATURES),
+            ACTIVE_RUN_ID,
         )
+
     except Exception as e:
         # The API can still start, but /ready will show it's not ready
         BUNDLE = None

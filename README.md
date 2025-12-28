@@ -1,3 +1,5 @@
+![CI](https://github.com/lid11a/loan-payback-predictor/actions/workflows/ci.yml/badge.svg)
+
 # Loan Payback Prediction
 
 Проект по бинарной классификации: по данным клиента предсказать, вернёт ли он кредит.

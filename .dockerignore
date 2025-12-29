@@ -6,7 +6,7 @@ __pycache__/
 .mypy_cache/
 
 data/
-models/
+# models/
 mlruns/
 mlflow.db
 logs/

@@ -31,3 +31,6 @@ venv/
 # coverage
 .coverage
 htmlcov/
+
+# monitoring reports
+reports/

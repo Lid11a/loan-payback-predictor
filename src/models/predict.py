@@ -85,16 +85,16 @@ def predict_and_save(
     """
 
     out_path = Path(out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
+    out_path.mkdir(parents = True, exist_ok = True)
 
     resolved_model_path = resolve_model_path(
-        model_path=model_path,
-        run_id=run_id,
-        experiment_id=experiment_id,
+        model_path = model_path,
+        run_id = run_id,
+        experiment_id = experiment_id,
     )
 
     logger.info(
-        "Predict started. data_dir=%s model_path=%s out_dir=%s tag=%s run_id=%s",
+        "Predict started. data_dir = %s model_path = %s out_dir = %s tag = %s run_id = %s",
         data_dir,
         resolved_model_path,
         out_dir,
@@ -113,8 +113,8 @@ def predict_and_save(
 
     bundle = joblib.load(resolved_model_path)
 
-    threshold = bundle["threshold"]
-    logger.info("Model bundle loaded. threshold=%.6f", threshold)
+    threshold = float(bundle["threshold"])
+    logger.info("Model bundle loaded. threshold = %.6f", threshold)
 
     train_df, test_df = load_kaggle_data(data_dir)
     _, _, x_test = make_xy(train_df, test_df)
@@ -125,21 +125,21 @@ def predict_and_save(
     submission = pd.DataFrame(
         {
             ID_COL: test_df[ID_COL].values,
-            TARGET_COL: y_proba,
+            TARGET_COL: y_proba.round(1),
         }
     )
 
     run_suffix = f"_run_{safe_name(run_id)}" if run_id else ""
     sub_path = out_path / f"submission_{safe_name(tag)}{run_suffix}.csv"
-    submission.to_csv(sub_path, index=False)
+    submission.to_csv(sub_path, index = False)
 
     logger.info("Saved submission: %s", sub_path)
 
-    decision = submission.rename(columns={TARGET_COL: "proba"}).copy()
+    decision = submission.rename(columns = {TARGET_COL: "proba"}).copy()
     decision["prediction"] = (decision["proba"] >= threshold).astype(int)
 
     decision_path = out_path / f"decisions_{safe_name(tag)}{run_suffix}_thr_{threshold:.4f}.csv"
-    decision.to_csv(decision_path, index=False)
+    decision.to_csv(decision_path, index = False)
 
     logger.info("Saved decisions: %s", decision_path)
     logger.info("Predict finished.")
@@ -151,17 +151,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--run-id",
-        type=str,
-        default=None,
-        help="MLflow run_id to load the model from mlruns/",
+        type = str,
+        default = None,
+        help = "MLflow run_id to load the model from mlruns/",
     )
     parser.add_argument(
         "--experiment-id",
-        type=str,
-        default="1",
-        help="MLflow experiment id (default: 1)",
+        type = str,
+        default = "1",
+        help = "MLflow experiment id (default: 1)",
     )
     args = parser.parse_args()
 
-    p = predict_and_save(run_id=args.run_id, experiment_id=args.experiment_id)
+    p = predict_and_save(run_id = args.run_id, experiment_id = args.experiment_id)
     logger.info("Saved submission: %s", p)

@@ -1,7 +1,7 @@
 # tests/test_api.py
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Generator
 
 import numpy as np
 import pytest
@@ -33,7 +33,7 @@ def _fake_bundle() -> Dict[str, Any]:
 
 
 @pytest.fixture()
-def client(monkeypatch) -> TestClient:
+def client(monkeypatch) -> Generator[TestClient, None, None]:
     """
     The fixture provides a TestClient with a patched model bundle.
 
@@ -77,7 +77,7 @@ def test_features(client: TestClient) -> None:
 
 def test_predict_ok(client: TestClient) -> None:
     payload = {"features": {"c1": "A", "f1": 123}}
-    r = client.post("/predict", json=payload)
+    r = client.post("/predict", json = payload)
     assert r.status_code == 200
     data = r.json()
     assert 0.0 <= data["proba"] <= 1.0
@@ -87,7 +87,7 @@ def test_predict_ok(client: TestClient) -> None:
 
 def test_predict_invalid_feature_set(client: TestClient) -> None:
     payload = {"features": {"c1": "A"}}  # missing f1
-    r = client.post("/predict", json=payload)
+    r = client.post("/predict", json = payload)
     assert r.status_code == 400
     detail = r.json()["detail"]
     assert "missing_features" in detail
@@ -101,7 +101,7 @@ def test_predict_batch_ok(client: TestClient) -> None:
             {"c1": "B", "f1": 2},
         ]
     }
-    r = client.post("/predict_batch", json=payload)
+    r = client.post("/predict_batch", json = payload)
     assert r.status_code == 200
     data = r.json()
     assert "results" in data
@@ -109,7 +109,7 @@ def test_predict_batch_ok(client: TestClient) -> None:
     assert data["results"][0]["threshold"] == 0.5
 
 def test_predict_batch_empty_items(client):
-    r = client.post("/predict_batch", json={"items": []})
+    r = client.post("/predict_batch", json = {"items": []})
     assert r.status_code == 400
 
 

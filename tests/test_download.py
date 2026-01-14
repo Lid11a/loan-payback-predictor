@@ -40,12 +40,13 @@ def test_download_skips_when_files_exist(tmp_path, monkeypatch):
 
     # The raw directory is prepared with the expected CSV files
     data_dir = tmp_path / "raw"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    (data_dir / "train.csv").write_text("id,target\n1,0\n", encoding="utf-8")
-    (data_dir / "test.csv").write_text("id\n10\n", encoding="utf-8")
+    data_dir.mkdir(parents = True, exist_ok = True)
+    (data_dir / "train.csv").write_text("id,target\n1,0\n", encoding = "utf-8")
+    (data_dir / "test.csv").write_text("id\n10\n", encoding = "utf-8")
 
     # The stub represents an unwanted external call in this scenario
     def _fail_run(*args, **kwargs):
+        _ = args, kwargs
         raise AssertionError("subprocess.run should NOT be called when files exist")
 
     # The patch is applied on the module where `subprocess.run` is used
@@ -68,12 +69,13 @@ def test_download_extracts_zip_when_missing(tmp_path, monkeypatch):
 
     # The raw directory is prepared without train/test files
     data_dir = tmp_path / "raw"
-    data_dir.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents = True, exist_ok = True)
 
     # The mocked download creates a zip file in the same directory
     zip_path = data_dir / "dataset.zip"
 
     def _fake_run(*args, **kwargs):
+        _ = args, kwargs
         _make_zip_with_csvs(zip_path)
 
         # The object below mimics the minimal interface of `subprocess.run(...)` result

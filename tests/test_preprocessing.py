@@ -4,10 +4,13 @@ Tests for preprocessing utilities.
 
 The test suite verifies stable behavior of helper functions used during
 feature preparation and preprocessing:
-- correct separation of numeric and categorical features
-- proper construction of X/y matrices for train and test datasets
-- consistent behavior of the one-hot encoding preprocessor during fit/transform
+- correct separation of numeric and categorical features;
+- proper construction of X/y matrices for train and test datasets;
+- consistent behavior of the one-hot encoding preprocessor during fit/transform.
 """
+
+from __future__ import annotations
+
 
 import pandas as pd
 import numpy as np
@@ -20,7 +23,7 @@ def test_split_features_separates_numeric_and_categorical():
     """
     The test checks that numeric and categorical features are separated correctly.
 
-    Identifier and target columns are expected to be excluded from both feature groups
+    Identifier and target columns are expected to be excluded from both feature groups.
     """
 
     df = pd.DataFrame(
@@ -49,7 +52,7 @@ def test_make_xy_splits_train_and_test_correctly():
     The test verifies correct construction of X_train, y_train and X_test.
 
     Identifier and target columns are expected to be removed from feature matrices,
-    while the target vector is returned separately
+    while the target vector is returned separately.
     """
 
     train_df = pd.DataFrame(
@@ -72,7 +75,7 @@ def test_make_xy_splits_train_and_test_correctly():
     x_train, y, x_test = make_xy(train_df, test_df)
 
     # Target vector is expected to be numeric
-    assert list(y.values) == [0.0, 1.0]
+    assert y.astype(float).to_list() == [0.0, 1.0]
 
     # Training features must not include identifier or target columns
     assert ID_COL not in x_train.columns
@@ -95,7 +98,7 @@ def test_build_preprocessor_ohe_fit_transform():
     The test checks that the OHE preprocessor can be fitted and applied consistently.
 
     Unseen categorical values during transform are expected to be handled without errors,
-    and output dimensionality should remain stable
+    and output dimensionality should remain stable.
     """
 
     df_train = pd.DataFrame(

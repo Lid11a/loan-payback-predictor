@@ -4,7 +4,7 @@ Tests for threshold selection logic.
 
 The test suite focuses on verifying that the threshold selection procedure
 behaves reasonably on a simple synthetic example, where score ordering and
-false positive rate can be controlled explicitly
+false positive rate can be controlled explicitly.
 """
 
 import numpy as np
@@ -18,7 +18,7 @@ def test_find_threshold_by_target_fpr_simple_case():
 
     The input scores are ordered such that increasing the threshold gradually
     reduces the false positive rate, allowing verification that the selected
-    threshold produces an FPR close to the specified target
+    threshold produces an FPR close to the specified target.
     """
 
     # Ground-truth labels where 0 denotes negative class and 1 denotes positive class
@@ -31,9 +31,9 @@ def test_find_threshold_by_target_fpr_simple_case():
     target_fpr = 0.25
 
     threshold, info = find_threshold_by_target_fpr(
-        y_true=y_true,
-        y_score=y_score,
-        target_fpr=target_fpr,
+        y_true = y_true,
+        y_score = y_score,
+        target_fpr = target_fpr,
     )
 
     # The selected threshold is expected to lie within the score range

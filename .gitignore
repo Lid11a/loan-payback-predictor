@@ -34,3 +34,8 @@ htmlcov/
 
 # monitoring reports
 reports/
+
+# notebooks outputs
+notebooks/data/
+notebooks/submission_*.csv
+notebooks/predictions_*.csv

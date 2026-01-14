@@ -6,12 +6,17 @@ from src.data.load import load_kaggle_data
 
 
 def test_load_kaggle_data_reads_csvs(tmp_path, monkeypatch):
+    """
+    The function verifies that `load_kaggle_data` reads existing train.csv and test.csv files
+    and returns them as pandas DataFrames.
+    """
+
     data_dir = tmp_path / "raw"
     data_dir.mkdir(parents=True, exist_ok=True)
 
     # create fake csvs
-    (data_dir / "train.csv").write_text("id,loan_paid_back,x\n1,0,10\n", encoding="utf-8")
-    (data_dir / "test.csv").write_text("id,x\n2,20\n", encoding="utf-8")
+    (data_dir / "train.csv").write_text("id,loan_paid_back,x\n1,0,10\n", encoding = "utf-8")
+    (data_dir / "test.csv").write_text("id,x\n2,20\n", encoding = "utf-8")
 
     # patch downloader: "pretend everything is downloaded"
     import src.data.load as load_module

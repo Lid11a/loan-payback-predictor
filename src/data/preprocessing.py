@@ -15,7 +15,7 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen = True)
 class FeatureSpec:
     """
     Container for numeric and categorical feature names.
@@ -36,18 +36,18 @@ def split_features(df: pd.DataFrame) -> FeatureSpec:
     feature names.
     """
 
-    x = df.drop(columns=[ID_COL, TARGET_COL], errors="ignore")
+    x = df.drop(columns = [ID_COL, TARGET_COL], errors = "ignore")
 
-    numeric = x.select_dtypes(include=np.number).columns.tolist()
-    categorical = x.select_dtypes(include="object").columns.tolist()
+    numeric = x.select_dtypes(include = np.number).columns.tolist()
+    categorical = x.select_dtypes(include = ["object", "category"]).columns.tolist()
 
     logger.info(
-        "Features split. numeric=%s categorical=%s",
+        "Features split. numeric = %s categorical = %s",
         len(numeric),
         len(categorical),
     )
 
-    return FeatureSpec(numeric=numeric, categorical=categorical)
+    return FeatureSpec(numeric = numeric, categorical = categorical)
 
 
 def make_xy(
@@ -66,10 +66,10 @@ def make_xy(
 
     y = train_df[TARGET_COL].astype(float)
 
-    x_train = train_df.drop(columns=[ID_COL, TARGET_COL])
-    x_test = test_df.drop(columns=[ID_COL])
+    x_train = train_df.drop(columns = [ID_COL, TARGET_COL])
+    x_test = test_df.drop(columns = [ID_COL])
 
-    logger.info("Prepared matrices. x_train=%s x_test=%s", x_train.shape, x_test.shape)
+    logger.info("Prepared matrices. x_train = %s x_test = %s", x_train.shape, x_test.shape)
 
     return x_train, y, x_test
 
@@ -84,16 +84,16 @@ def build_preprocessor_ohe(categorical_features: List[str]) -> ColumnTransformer
     Returns a fitted ColumnTransformer configuration.
     """
 
-    logger.info("Building OHE preprocessor. categorical_features=%s", len(categorical_features))
+    logger.info("Building OHE preprocessor. categorical_features = %s", len(categorical_features))
 
     return ColumnTransformer(
-        transformers=[
+        transformers = [
             (
                 "categorical",
-                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+                OneHotEncoder(handle_unknown = "ignore", sparse_output = False),
                 categorical_features,
             ),
         ],
-        remainder="passthrough",
-        n_jobs=-1,
+        remainder = "passthrough",
+        n_jobs = -1,
     )

@@ -9,7 +9,7 @@ def _add_file_handler(root: logging.Logger, log_path: Path, formatter: logging.F
     """
     The helper adds a FileHandler to the root logger.
     """
-    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh = logging.FileHandler(log_path, encoding = "utf-8")
     fh.setFormatter(formatter)
     root.addHandler(fh)
 
@@ -44,7 +44,7 @@ def setup_logging(level: str | None = None) -> None:
 
     # Ensure logs directory exists
     log_dir = Path("logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
+    log_dir.mkdir(parents = True, exist_ok = True)
 
     # Create dedicated loggers per layer and attach file handlers to them
     mapping = {

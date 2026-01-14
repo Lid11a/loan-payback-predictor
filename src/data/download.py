@@ -24,8 +24,8 @@ def download_kaggle_competition(data_dir: str | Path = "data/raw") -> Path:
 
     # The input path is normalized and the target directory is ensured to exist
     data_path = Path(data_dir)
-    data_path.mkdir(parents=True, exist_ok=True)
-    logger.info("Download started. competition=%s data_dir=%s", COMPETITION, data_path)
+    data_path.mkdir(parents = True, exist_ok = True)
+    logger.info("Download started. competition = %s data_dir = %s", COMPETITION, data_path)
 
     train_csv = data_path / "train.csv"
     test_csv = data_path / "test.csv"
@@ -38,8 +38,8 @@ def download_kaggle_competition(data_dir: str | Path = "data/raw") -> Path:
     # The Kaggle CLI is invoked to download the competition archive
     res = subprocess.run(
         ["kaggle", "competitions", "download", "-c", COMPETITION, "-p", str(data_path)],
-        text=True,
-        capture_output=True,
+        text = True,
+        capture_output = True,
     )
 
     # Kaggle CLI output is logged to assist with diagnostics if needed
@@ -60,7 +60,7 @@ def download_kaggle_competition(data_dir: str | Path = "data/raw") -> Path:
         )
 
     # The largest archive is selected, which typically corresponds to the main dataset
-    zip_path = max(zips, key=lambda p: p.stat().st_size)
+    zip_path = max(zips, key = lambda p: p.stat().st_size)
 
     logger.info("Extracting archive: %s", zip_path)
 
@@ -69,7 +69,7 @@ def download_kaggle_competition(data_dir: str | Path = "data/raw") -> Path:
         zf.extractall(data_path)
 
     # Optional cleanup: the archive may be removed after extraction
-    # zip_path.unlink(missing_ok=True)
+    # zip_path.unlink(missing_ok = True)
 
     # A final check verifies that the expected CSV files are present
     if not (train_csv.exists() and test_csv.exists()):

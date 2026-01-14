@@ -47,12 +47,12 @@ def promote_run_to_active_model(
     Returns the path to the active model bundle.
     """
     model_dir_path = Path(model_dir)
-    model_dir_path.mkdir(parents=True, exist_ok=True)
+    model_dir_path.mkdir(parents = True, exist_ok = True)
 
-    src_path = resolve_mlflow_model_path(run_id=run_id, experiment_id=experiment_id)
+    src_path = resolve_mlflow_model_path(run_id = run_id, experiment_id = experiment_id)
     if not src_path.exists():
         raise FileNotFoundError(
-            f"MLflow model bundle not found for run_id={run_id}\n"
+            f"MLflow model bundle not found for run_id = {run_id}\n"
             f"Expected: {src_path}\n"
             f"Tip: check experiment_id (default is 1) and that artifacts were logged."
         )
@@ -60,7 +60,7 @@ def promote_run_to_active_model(
     dst_path = model_dir_path / active_name
 
     logger.info(
-        "Promoting run to active model. run_id=%s experiment_id=%s",
+        "Promoting run to active model. run_id = %s experiment_id = %s",
         run_id,
         experiment_id,
     )
@@ -68,18 +68,18 @@ def promote_run_to_active_model(
 
     shutil.copy2(src_path, dst_path)
 
-    (model_dir_path / "latest_run.txt").write_text(run_id, encoding="utf-8")
+    (model_dir_path / "latest_run.txt").write_text(run_id, encoding = "utf-8")
 
     logger.info("Active model is now: %s", dst_path)
-    logger.info("latest_run.txt updated with run_id=%s", run_id)
+    logger.info("latest_run.txt updated with run_id = %s", run_id)
 
     return dst_path
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Promote an MLflow run model to the active project model.")
-    parser.add_argument("--run-id", type=str, required=True, help="MLflow run_id to promote")
-    parser.add_argument("--experiment-id", type=str, default="1", help="MLflow experiment id (default: 1)")
+    parser = argparse.ArgumentParser(description = "Promote an MLflow run model to the active project model.")
+    parser.add_argument("--run-id", type = str, required = True, help = "MLflow run_id to promote")
+    parser.add_argument("--experiment-id", type = str, default = "1", help = "MLflow experiment id (default: 1)")
     args = parser.parse_args()
 
-    promote_run_to_active_model(run_id=args.run_id, experiment_id=args.experiment_id)
+    promote_run_to_active_model(run_id = args.run_id, experiment_id = args.experiment_id)

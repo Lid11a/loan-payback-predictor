@@ -1,4 +1,3 @@
-# src/models/train.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,14 +27,15 @@ def find_threshold_by_target_fpr(
     grid_size: int = 1000,
 ) -> Tuple[float, Dict[str, Any]]:
     """
-    The function selects a decision threshold such that the false positive rate (FPR)
-    is as close as possible to `target_fpr`.
+    The function selects a decision threshold such that the achieved False Positive Rate (FPR)
+    is as close as possible to the target value.
 
-    The threshold search is performed over either all unique score values or over a
-    quantile-based grid when the number of unique values is large.
+    The threshold is selected by scanning either all unique score values
+    or a quantile-based grid when the score distribution is large.
 
-    Returns the selected threshold and a dictionary containing FPR and confusion
-    matrix components at that threshold.
+    Returns:
+        threshold: selected probability threshold
+        info: dictionary with achieved FPR and confusion matrix components
     """
 
     y_true = np.asarray(y_true).ravel()
@@ -54,7 +54,7 @@ def find_threshold_by_target_fpr(
 
     for thr in thresholds:
         y_pred = (y_score >= thr).astype(int)
-        tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+        tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels = [0, 1]).ravel()
 
         fpr = fp / (fp + tn + 1e-12)
         gap = abs(fpr - target_fpr)
@@ -79,22 +79,29 @@ def train_best_model(
     artifact_name: str = "best_model.joblib",
     seed: int = 42,
     target_fpr: float = 0.20,
+    threshold_holdout_size: float = 0.20,
 ) -> Path:
     """
-    The function trains the final LightGBM model and saves a model bundle to disk.
+    The function trains the final LightGBM model and produces a production-ready model bundle.
 
-    Training uses one-hot encoding for categorical features and LightGBM cross-validation
-    with early stopping to determine the number of boosting iterations. A separate split
-    is used to select a decision threshold that targets a specified false positive rate.
+    Training procedure:
+    1. Split the training data into:
+       - a fitting subset (used to train the model),
+       - a holdout subset (used ONLY to select the decision threshold).
+    2. Train the model (with CV and early stopping) on the fitting subset.
+    3. Select a probability threshold on the holdout subset to match target FPR.
+    4. Re-train the final model on ALL available training data
+       using the previously selected threshold.
 
-    Returns the path to the saved model bundle file.
+    This approach avoids threshold overfitting while keeping the final model
+    trained on the full dataset.
     """
 
     model_dir_path = Path(model_dir)
-    model_dir_path.mkdir(parents=True, exist_ok=True)
+    model_dir_path.mkdir(parents = True, exist_ok = True)
 
     logger.info(
-        "Train started. data_dir=%s model_dir=%s artifact=%s seed=%s target_fpr=%.4f",
+        "Train started. data_dir = %s model_dir = %s artifact = %s seed = %s target_fpr = %.4f",
         data_dir,
         model_dir,
         artifact_name,
@@ -102,27 +109,35 @@ def train_best_model(
         target_fpr,
     )
 
-    # Set MLflow experiment (creates it if it does not exist)
     mlflow.set_experiment("loan_payback_training")
 
-    # One MLflow run = one training execution
     with mlflow.start_run() as run:
-        # Unique ID of this training run (used to locate model + metrics later)
         run_id = run.info.run_id
-        logger.info("MLflow run_id=%s", run_id)
+        logger.info("MLflow run_id = %s", run_id)
 
-        # Data loading
+        # Load data and build feature matrices
         train_df, test_df = load_kaggle_data(data_dir)
-        x_train, y, _ = make_xy(train_df, test_df)
+        x_all, y_all, _ = make_xy(train_df, test_df)
 
-        # Preprocessing
+        # Feature specification is stored only for metadata/debugging purposes
         spec = split_features(train_df)
-        preprocessor = build_preprocessor_ohe(spec.categorical)
 
-        x_proc = preprocessor.fit_transform(x_train)
-        dtrain = lgb.Dataset(x_proc, label=y)
+        # Split data:
+        # - x_fit / y_fit: used to train the model
+        # - x_thr / y_thr: used ONLY to select the decision threshold
+        x_fit, x_thr, y_fit, y_thr = train_test_split(
+            x_all,
+            y_all,
+            test_size = threshold_holdout_size,
+            random_state = seed,
+            stratify = y_all,
+        )
 
-        # Model parameters
+        # Preprocessor is fitted only on the fitting subset
+        preprocessor_fit = build_preprocessor_ohe(spec.categorical)
+        x_fit_proc = preprocessor_fit.fit_transform(x_fit)
+        dtrain = lgb.Dataset(x_fit_proc, label = y_fit)
+
         lgb_params = {
             "objective": "binary",
             "metric": "auc",
@@ -137,75 +152,68 @@ def train_best_model(
             "seed": seed,
         }
 
-        # Log parameters to MLflow
         mlflow.log_params(lgb_params)
         mlflow.log_param("target_fpr", target_fpr)
 
-        # Cross-validation
+        # Cross-validation to select the number of boosting iterations
         cv_res = lgb.cv(
             lgb_params,
             dtrain,
-            num_boost_round=5000,
-            nfold=5,
-            stratified=True,
-            shuffle=True,
-            seed=seed,
-            callbacks=[
-                lgb.early_stopping(stopping_rounds=50),
-                lgb.log_evaluation(period=50),
+            num_boost_round = 5000,
+            nfold = 5,
+            stratified = True,
+            shuffle = True,
+            seed = seed,
+            callbacks = [
+                lgb.early_stopping(stopping_rounds = 50),
+                lgb.log_evaluation(period = 50),
             ],
         )
 
         best_iter = len(cv_res["valid auc-mean"])
         mlflow.log_param("best_iter", best_iter)
+        logger.info("CV finished. best_iter = %s", best_iter)
 
-        logger.info("CV finished. best_iter=%s", best_iter)
+        # Train model on the fitting subset
+        model_fit = lgb.train(lgb_params, dtrain, num_boost_round = best_iter)
 
-        # Final training
-        model = lgb.train(lgb_params, dtrain, num_boost_round=best_iter)
-
-        # Threshold selection
-        _, x_thr_val, _, y_thr_val = train_test_split(
-            x_train,
-            y,
-            test_size=0.20,
-            random_state=seed,
-            stratify=y,
-        )
-
-        x_thr_val_proc = preprocessor.transform(x_thr_val)
-        y_thr_score = model.predict(x_thr_val_proc)
+        # Select threshold on the holdout subset (unseen during training)
+        x_thr_proc = preprocessor_fit.transform(x_thr)
+        y_thr_score = model_fit.predict(x_thr_proc)
 
         best_thr, thr_info = find_threshold_by_target_fpr(
-            y_true=y_thr_val,
-            y_score=y_thr_score,
-            target_fpr=target_fpr,
+            y_true = y_thr,
+            y_score = y_thr_score,
+            target_fpr = target_fpr,
         )
 
         logger.info(
-            "Threshold selected. threshold=%.6f achieved_fpr=%.6f",
+            "Threshold selected on holdout. threshold = %.6f achieved_fpr = %.6f",
             best_thr,
             thr_info["FPR"],
         )
 
-        # Log metrics to MLflow
         mlflow.log_metric("threshold", best_thr)
-        mlflow.log_metric("FPR", thr_info["FPR"])
-        mlflow.log_metric("TP", thr_info["TP"])
-        mlflow.log_metric("FP", thr_info["FP"])
-        mlflow.log_metric("TN", thr_info["TN"])
-        mlflow.log_metric("FN", thr_info["FN"])
+        mlflow.log_metric("FPR_holdout", thr_info["FPR"])
 
-        # Save model bundle
+        # Refit final model on ALL data to maximize predictive quality.
+        # The threshold remains fixed and is NOT re-optimized.
+        preprocessor_final = build_preprocessor_ohe(spec.categorical)
+        x_all_proc = preprocessor_final.fit_transform(x_all)
+        dtrain_all = lgb.Dataset(x_all_proc, label = y_all)
+
+        model_final = lgb.train(lgb_params, dtrain_all, num_boost_round = best_iter)
+
         bundle = {
-            "model": model,
-            "preprocessor": preprocessor,
-            "threshold": best_thr,
+            "model": model_final,
+            "preprocessor": preprocessor_final,
+            "threshold": float(best_thr),
             "meta": {
                 "target_col": TARGET_COL,
                 "id_col": ID_COL,
                 "best_iter": best_iter,
                 "threshold_info": thr_info,
+                "threshold_holdout_size": threshold_holdout_size,
                 "categorical_features": spec.categorical,
                 "numeric_features": spec.numeric,
                 "lgb_params": lgb_params,
@@ -216,11 +224,10 @@ def train_best_model(
         out_path = model_dir_path / artifact_name
         joblib.dump(bundle, out_path)
 
-        (model_dir_path / "latest_run.txt").write_text(run_id, encoding="utf-8")
+        # Store run_id of the latest successfully trained model
+        (model_dir_path / "latest_run.txt").write_text(run_id, encoding = "utf-8")
 
-        # Log model artifact to MLflow
-        mlflow.log_artifact(str(out_path), artifact_path="model")
-
+        mlflow.log_artifact(str(out_path), artifact_path = "model")
         logger.info("Train finished. Model saved to %s", out_path)
 
         return out_path

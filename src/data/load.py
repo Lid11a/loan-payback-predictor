@@ -26,7 +26,7 @@ def load_kaggle_data(
     """
 
     data_path = Path(data_dir)
-    logger.info("Loading Kaggle data. data_dir=%s", data_path)
+    logger.info("Loading Kaggle data. data_dir = %s", data_path)
 
     # The presence of the required data files is ensured
     data_path = download_kaggle_competition(data_path)
@@ -47,7 +47,7 @@ def load_kaggle_data(
     test_df = pd.read_csv(test_path)
 
     logger.info(
-        "Data loaded successfully. train_shape=%s test_shape=%s",
+        "Data loaded successfully. train_shape = %s test_shape = %s",
         train_df.shape,
         test_df.shape,
     )

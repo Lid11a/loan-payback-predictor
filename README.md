@@ -2,249 +2,371 @@
 
 # Loan Payback Prediction
 
-ML-проект по бинарной классификации: по данным клиента предсказать, **вернёт ли он кредит**.
+A binary classification machine learning project focused on predicting **whether a client will repay a loan** 
+based on their profile and financial characteristics.
 
-Проект построен как полноценный end-to-end pipeline: 
-от глубокого исследовательского анализа данных через эксперименты с моделями и гипотезами  
-к воспроизводимому production-ready коду, включая обучение/предсказание, MLflow, тесты, FastAPI, Docker и CI.
+This repository demonstrates the **full lifecycle of an ML project**:
 
----
+1) in-depth exploratory data analysis and model experimentation in a Jupyter Notebook;  
+2) selection of a final solution under explicit business constraints (target FPR);  
+3) transition from research results to a reproducible, production-style ML service.
 
-## Содержание
+The project includes reproducible training and inference, MLflow experiment tracking, automated tests, CI,
+a FastAPI-based inference API, Dockerized deployment, and offline feature drift monitoring (PSI).
 
-- [Общая идея проекта](#общая-идея-проекта)
-- [Notebook — основа проекта](#1-notebook--основа-проекта-eda-исследования-выбор-лучшего-решения)
-- [Кодовая часть проекта](#2-кодовая-часть-проекта--воспроизводимый-ml-пайплайн-и-http-сервис-для-инференса)
-- [Feature Drift Monitoring (PSI)](#3-feature-drift-monitoring-psi)
-- [Структура проекта](#структура-проекта)
-- [Данные Kaggle](#данные-kaggle)
-- [Команды](#команды)
-  - [Установка зависимостей](#1-установка-зависимостей)
-  - [Запуск тестов](#2-запуск-тестов)
-  - [Обучение модели](#3-обучение-модели)
-  - [Предсказание](#4-предсказание)
-  - [Запуск API](#5-запуск-api-локально-без-docker)
-- [MLflow](#mlflow)
-- [API эндпоинты](#api-эндпоинты)
-- [Docker](#docker-воспроизводимый-запуск)
-- [CI](#ci-github-actions)
-- [Используемые технологии](#используемые-технологии)
+**Languages:** [English](README.md) | [Русский](README_RU.md)
 
 ---
 
-## Общая идея проекта
+## Table of contents
 
-Этот проект — не просто “обучить модель”, а **показать весь путь работы с ML-задачей**:
-
-- понять данные и их структуру;
-- исследовать поведение целевой переменной;
-- проверить гипотезы, сегментацию, альтернативные представления данных;
-- сравнить разные классы моделей;
-- выбрать рабочее решение под бизнес-ограничения;
-- перенести результат в чистый, тестируемый, воспроизводимый код.
-
----
-
-### 1) Notebook — основа проекта (EDA, исследования, выбор лучшего решения)
-
-Файл `notebooks/loan_payback_predictor.ipynb` — **ключевая часть проекта** и основной объём проделанной работы.
-В ноутбуке проведён крупный и детальный анализ, включающий:
-
-- **Анализ данных (EDA)**
-  - анализ структуры датасета, типов признаков и целевой переменной;
-  - распределения числовых признаков, выбросы, лог-трансформации;
-  - анализ пропусков и их влияния;
-  - исследование категориальных признаков:
-    - распределения категорий,
-    - default rate / paid-back rate по категориям.
-
-- **Статистический анализ**
-  - проверка зависимости категориальных признаков и таргета (chi-square);
-  - интерпретация значимости признаков;
-  - сопоставление статистической значимости признаков с их вкладом в модели.
-
-- **Кластеризация и исследование структуры данных**
-  - KMeans, Gaussian Mixture Models (GMM):
-    - подбор числа кластеров по silhouette score;
-    - анализ распределения таргета внутри кластеров;
-    - визуализация кластеров (PCA scatter plots);
-    - анализ распределения grade_subgrade внутри кластеров.
-Кластеризация используется не как обязательный этап, а как исследовательский инструмент
-для лучшего понимания структуры данных и поведения клиентов.
-
-- **Эксперименты с моделями**
-  - В ноутбуке последовательно исследуются различные классы моделей, 
-  чтобы сравнить их поведение на данных, чувствительность к признакам 
-  и качество предсказаний в рамках одной задачи. 
-
-Рассмотрены следующие подходы:
-  - Linear models;
-  - K-Nearest Neighbors;
-  - Support Vector Machines;
-  - Naive Bayes models;
-  - Tree-based models;
-  - Neural network model.
-
-Эксперименты проводились с разными наборами признаков и вариантами препроцессинга 
-с целью понять, какие классы моделей лучше подходят для данной задачи 
-и какие предположения о данных подтверждаются на практике.
-
-- **Выбор финальной модели**
-
-  Для лучшей модели реализовано:
-  - подбор порога классификации под бизнес-ограничение (целевой FPR);
-  - early stopping для контроля переобучения;
-  - анализ важности признаков и интерпретация результатов.
-
-
-- **Результат ноутбука**  
-Выбрана финальная модель, препроцессинг и логика принятия решения, которые затем перенесены в production-ready код (`src/`).
+- [Project Overview](#project-overview)
+- [Exploratory Analysis](#exploratory-analysis)
+- [Code Implementation](#code-implementation)
+- [Feature Drift Monitoring (PSI)](#feature-drift-monitoring-psi)
+- [Project Structure](#project-structure)
+- [Data](#data)
+- [Running the Project](#running-the-project)
+- [Technologies Used](#technologies-used)
+- [License](#license)
 
 ---
 
-### 2) Кодовая часть проекта — воспроизводимый ML-пайплайн и HTTP-сервис для инференса.
+## Project overview
 
-Код в `src/` переносит результаты исследовательского анализа из ноутбука
-в автоматизированный и воспроизводимый pipeline:
+This project focuses on a **credit scoring problem** and demonstrates the complete workflow 
+of a binary classification task: from exploratory data analysis and model experimentation 
+to a reproducible engineering implementation and online inference.
 
-- `train.py` — обучение финальной модели, подбор порога и сохранение единого bundle (модель + препроцессор + threshold);
-- `predict.py` — инференс и формирование выходных файлов;
-- `preprocessing.py` — единый пайплайн обработки данных;
-- MLflow — логирование экспериментов;
-- pytest — тестирование ключевой логики;
-- FastAPI — HTTP API для инференса;
-- Docker — воспроизводимый запуск;
-- CI — автоматическая проверка кода при push.
+The goal of the project is to demonstrate the model selection process and the transition 
+from research insights to an engineering-oriented ML solution suitable for practical use and further development.
+
+The project includes:
+
+- exploratory data analysis, including analysis of feature distributions, target variable behavior, 
+  and the structure of factors influencing loan default risk;
+- statistical analysis and hypothesis testing used to interpret data patterns
+  and compare statistical findings with model behavior;
+- experimental comparison of different model families and training approaches;
+- selection of a final solution under an explicit business constraint
+  (classification threshold selection based on a target FPR);
+- implementation of a reproducible ML pipeline
+  with shared preprocessing and strict train/inference consistency;
+- implementation of training and inference workflows with experiment tracking via MLflow;
+- implementation of an HTTP API for online inference based on FastAPI;
+- setup of automated testing and CI to ensure code correctness;
+- implementation of reproducible service execution using Docker;
+- implementation of offline feature drift monitoring (PSI) to track input data stability.
+
+The project is presented in a structured manner, covering the exploratory phase,
+the production-style implementation, and the supporting components that ensure reproducibility and quality control.
 
 ---
 
-### 3) Feature Drift Monitoring (PSI)
+## Exploratory analysis
 
-В проекте реализован отдельный модуль offline / batch мониторинга дрифта признаков,
-предназначенный для контроля стабильности входных данных после обучения модели.
+The exploratory part of the project is implemented in `notebooks/loan_payback_predictor.ipynb`
+and serves as the foundation for all subsequent modeling and pipeline design decisions.
 
-Мониторинг позволяет оценить, изменились ли распределения признаков по сравнению с обучающей выборкой, 
-что является важной практикой для поддержания качества ML-моделей.
+The notebook follows a structured approach to data analysis and modeling.
 
-**Подход**
-- Для оценки дрифта используется Population Stability Index (PSI).
+### Exploratory data analysis (EDA)
 
-Сравниваются два датасета:
-- **reference dataset** — обучающая выборка (`train.csv`);
-- **current dataset** — новая партия данных (`test.csv`).
+Initial analysis focuses on understanding the dataset structure,
+feature properties, and target variable behavior.
 
-Мониторинг выполняется на уровне исходных признаков (до One-Hot Encoding), 
-что упрощает интерпретацию результатов и делает проверку более устойчивой.
+EDA includes:
 
-**Расчёт PSI**
-- **Числовые признаки**  
-  PSI рассчитывается по бинам, сформированным на reference-данных (квантильное биннирование).
-- **Категориальные признаки**  
-  PSI рассчитывается по долям категорий в reference и current выборках, включая новые (unseen) значения.
+- inspection of dataset structure, feature types, and target distribution;
+- analysis of numerical feature distributions and outlier detection;
+- missing value analysis and assessment of their potential impact;
+- categorical feature analysis, including:
+  - category distributions;
+  - default rates across categories.
 
-Дополнительно для каждого признака фиксируются:
-- доля пропусков (reference / current);
-- количество уникальных значений (для категориальных признаков).
+### Statistical analysis
 
-**Интерпретация PSI**
+Statistical analysis is used to quantitatively assess relationships between features and the target
+and to validate patterns identified during EDA.
 
-Используется стандартная эвристическая интерпретация PSI, принятая в задачах скоринга и мониторинга данных:
-- PSI < 0.10 — OK (распределение стабильно);
-- 0.10 ≤ PSI < 0.25 — WARN (умеренный сдвиг);
-- PSI ≥ 0.25 — DRIFT (значимый дрифт).
+This includes:
 
-**Запуск мониторинга**
+- statistical tests for dependency between categorical features and the target;
+- interpretation of statistical significance;
+- comparison of statistical relevance with model-based feature importance.
+
+### Data structure exploration
+
+Clustering is applied as an exploratory technique to analyze the structure of the customer population.
+
+**Methods applied:**
+
+- KMeans;
+- Gaussian Mixture Models (GMM).
+
+**Clustering analysis includes:**
+
+- selection of the number of clusters using the silhouette score;
+- analysis of target distribution within clusters;
+- visualization of cluster structure in reduced dimensionality using PCA;
+- analysis of `grade_subgrade` distribution across clusters.
+
+Clustering is applied for analytical purposes only and is excluded from the final ML pipeline.
+
+### Model experiments
+
+Model experiments aim to compare different algorithm families
+in terms of predictive performance, stability, and feature sensitivity.
+
+The following approaches are evaluated:
+
+- linear models;
+- distance-based and margin-based methods (KNN, SVM);
+- probabilistic models (Naive Bayes);
+- decision trees and ensemble methods;
+- neural networks (MLP).
+
+Experiments are conducted with different preprocessing strategies and feature sets
+to assess model robustness and identify the most suitable approach for the task.
+
+### Final model selection
+
+The final solution is selected based on experimental results
+and detailed analysis of model behavior.
+
+Key steps include:
+
+- application of early stopping to control overfitting;
+- feature importance analysis and interpretation of results;
+- classification threshold selection under a predefined business constraint (target FPR).
+
+---
+
+## Code implementation
+
+The codebase translates research findings into a reproducible ML pipeline and inference service.
+
+The primary objective of the implementation is to ensure:
+- consistent data processing between training and inference;
+- reproducibility of experiments;
+- practical usability of the selected solution.
+
+### Training and inference
+
+Training and inference are implemented as separate workflows sharing a unified data processing pipeline.
+
+During training:
+
+- a single preprocessing pipeline is constructed;
+- the final model is trained with overfitting control (early stopping);
+- a classification threshold is selected based on the target FPR;
+- a unified model bundle is saved, including the model, preprocessor, threshold, and auxiliary metadata.
+
+Inference uses the saved bundle directly, eliminating discrepancies between training and prediction logic.
+
+### Reproducibility and logging
+
+Two complementary mechanisms are used to ensure reproducibility and observability of the system.
+
+Standard Python logging is applied to track pipeline execution and service logic.
+Logs are generated across the core project modules and persisted to files,
+enabling detailed analysis of pipeline behavior and effective error diagnosis.
+
+MLflow is used to track training runs. Each run stores training parameters, quality metrics, and model artifacts,
+ensuring experiment reproducibility and enabling systematic comparison of different runs.
+
+### Online inference service
+
+An HTTP API for online inference is implemented using FastAPI.
+
+The service:
+
+- loads the saved model bundle at startup;
+- validates incoming request schemas;
+- returns prediction probabilities and binary decisions based on the selected classification threshold.
+
+
+### Testing and quality control
+
+Key components of the ML pipeline and service are covered by automated tests (pytest).
+
+Tests validate:
+
+- data download and loading (`test_download.py`, `test_load.py`);
+- preprocessing and feature preparation (`test_preprocessing.py`);
+- threshold selection and application (`test_threshold.py`);
+- CLI inference workflows (`test_predict_cli.py`);
+- API endpoint behavior (`test_api.py`);
+- feature drift monitoring logic (`test_drift.py`);
+- logging setup and utility functions (`test_logger_setup.py`, `test_utils.py`).
+
+Tests are executed automatically in the CI pipeline, reducing the risk of regressions.
+
+### Reproducible execution
+
+Docker is used to ensure an isolated and reproducible runtime environment.
+
+The Docker image contains all required dependencies and allows the inference service to be run 
+in a consistent environment, simplifying validation and demonstration.
+
+---
+
+## Feature drift monitoring (PSI)
+
+The project includes a dedicated offline feature drift monitoring module 
+designed to assess post-training input data stability.
+
+Drift monitoring evaluates changes in feature distributions in new data relative to the training (reference) dataset
+and is implemented as an independent batch process.
+
+The **Population Stability Index (PSI)** is used as the drift metric.
+Comparisons are performed between the reference dataset and a new data batch.
+
+Drift is calculated at the raw feature level (before one-hot encoding), improving interpretability.
+
+For numerical features, PSI is computed using quantile-based bins derived from the reference data, 
+with a separate bin for missing values.
+For categorical features, category proportions are used, including previously unseen values.
+
+For each feature, an aggregated report is generated containing:
+- PSI value;
+- drift status (`OK / WARN / DRIFT`);
+- auxiliary statistics for missing values and feature cardinality.
+
+The module is intended for analytical monitoring and is not part of the online inference path.
+
+**Run drift monitoring:**
 
 ```
 python -m src.monitoring.drift
 ```
 
-После выполнения формируется **CSV-отчёт**:
+After execution of the command, a CSV report is generated:
 
 ```
 reports/drift_report.csv
 ```
 
-Отчёт содержит:
-- feature — имя признака;
-- type — тип признака (numeric / categorical);
-- psi — значение PSI;
-- status — OK / WARN / DRIFT;
-- ref_missing_rate, cur_missing_rate;
-- ref_unique, cur_unique (для категориальных признаков).
-
 ---
 
-## Структура проекта
+## Project structure
+
+The repository structure is shown below and reflects the separation of the project into the exploratory component,
+the ML pipeline implementation, and the service components.
 
 ```
 loan_py/
 ├── src/
-│ ├── api/ # HTTP API для онлайн-инференса
-│ │ └── app.py # FastAPI приложение: /predict, /predict_batch, /ready
-│ ├── data/ # Загрузка и подготовка исходных данных
-│ │ ├── download.py # Скачивание данных с Kaggle через CLI
-│ │ ├── load.py # Чтение train.csv / test.csv
-│ │ └── preprocessing.py # Формирование X/y и препроцессинг (OHE)
-│ ├── models/ # Обучение, инференс и управление моделями
-│ │ ├── predict.py # Инференс по сохранённому bundle и сохранение предсказаний
-│ │ ├── promote.py # Промоут MLflow run в финальную модель
-│ │ ├── train.py # Финальное обучение модели и подбор порога
-│ │ ├── train_baseline.py # Базовая модель для сравнения
-│ │ └── train_holdout.py # Альтернативный сценарий обучения (holdout)
+│ ├── api/                      # HTTP API for online inference
+│ │ └── app.py                  # FastAPI application: /predict, /predict_batch, /ready
+│ ├── data/                     # Raw data download and preparation
+│ │ ├── download.py             # Dataset download from Kaggle via CLI
+│ │ ├── load.py                 # Loading train.csv / test.csv
+│ │ └── preprocessing.py        # X/y construction and preprocessing (OHE)
+│ ├── models/                   # Model training, inference, and management
+│ │ ├── predict.py              # Inference using the saved bundle and prediction export
+│ │ ├── promote.py              # Promotion of an MLflow run to the final model
+│ │ ├── train.py                # Final model training and threshold selection
+│ │ ├── train_baseline.py       # Baseline model for comparison
+│ │ └── train_holdout.py        # Alternative training scenario (holdout)
 │ ├── monitoring/
-│ │ └── drift.py # Offline мониторинг дрифта признаков (PSI)
+│ │ └── drift.py                # Offline feature drift monitoring (PSI)
 │ └── utils/
-│   ├── config.py # Константы проекта (имена колонок, параметры и т.д.)
-│   └── logger.py # Централизованная настройка логирования
-├── tests/ # Автотесты (pytest)
-│ ├── test_conftest.py           # Общие фикстуры для тестов
-│ ├── test_api.py                # Тесты API эндпоинтов
-│ ├── test_download.py           # Тесты загрузки данных
-│ ├── test_drift.py              # Тесты модуля мониторинга дрифта
-│ ├── test_load.py               # Тесты загрузки и чтения данных
-│ ├── test_logger_setup.py       # Проверка настройки логирования
-│ ├── test_predict_cli.py        # Тесты CLI-инференса
-│ ├── test_preprocessing.py      # Тесты препроцессинга
-│ ├── test_threshold.py          # Тесты логики подбора порога
-│ └── test_utils.py              # Тесты вспомогательных функций
-├── notebooks/                   # Исследовательская часть проекта
-│ └── loan_payback_predictor.ipynb  # EDA, эксперименты, выбор финальной модели
-├── .dockerignore                # Исключения для Docker-сборки
-├── .gitignore                   # Исключения для Git
-├── Dockerfile                   # Docker-образ для API
-├── pyproject.toml               # Конфигурация проекта и инструментов
-├── README.md                    # Описание проекта
-├── requirements-all.txt         # Полный список зависимостей
-└── requirements-ci.txt          # Зависимости для CI
+│   ├── config.py               # Project constants (column names, parameters, etc.)
+│   └── logger.py               # Centralized logging configuration
+├── tests/                      # Automated tests (pytest)
+│ ├── test_conftest.py          # Shared test fixtures
+│ ├── test_api.py               # API endpoint tests
+│ ├── test_download.py          # Data download tests
+│ ├── test_drift.py             # Drift monitoring module tests
+│ ├── test_load.py              # Data loading tests
+│ ├── test_logger_setup.py      # Logging configuration tests
+│ ├── test_predict_cli.py       # CLI inference tests
+│ ├── test_preprocessing.py     # Preprocessing tests
+│ ├── test_threshold.py         # Threshold selection logic tests
+│ └── test_utils.py             # Utility function tests
+├── notebooks/                  # Exploratory analysis
+│ └── loan_payback_predictor.ipynb  # EDA, experiments, final model selection
+├── .dockerignore                # Docker build exclusions
+├── .gitignore                   # Git exclusions
+├── Dockerfile                   # Docker image for the API
+├── pyproject.toml               # Project and tool configuration
+├── README.md                    # Project description
+├── LICENSE                      # Project license
+├── requirements-all.txt         # Full dependency list
+└── requirements-ci.txt          # CI dependencies
 ```
 
 ---
 
-## Данные Kaggle
+## Data
 
-Данные скачиваются из Kaggle соревнования через CLI.
+The project uses data from a Kaggle competition.
+The data is not stored in the repository and is downloaded locally via the Kaggle API.
 
-Нужно настроить Kaggle API token:
-1. Kaggle → Account → Create New API Token
-2. положить `kaggle.json` в:
-   - Windows: `%USERPROFILE%\.kaggle\kaggle.json`
-   - Linux/macOS: `~/.kaggle/kaggle.json`
+To use the project, the following steps are required:
+1) cloning the repository;
+2) configuring Kaggle API access;
+3) downloading training and test datasets locally.
 
-По умолчанию данные будут в:
-- `data/raw/train.csv`
-- `data/raw/test.csv`
+The complete sequence of steps is described below.
+
+### 1) Project setup
+
+Clone the repository and navigate to its root directory:
+
+```
+git clone https://github.com/lid11a/loan-payback-predictor.git
+cd loan-payback-predictor
+```
+
+After executing the `cd` command, you are located in the project root directory,
+which contains `src/`, `tests/`, `notebooks/`, `Dockerfile`, and `README`.
+
+### 2) Kaggle data access configuration
+
+The project uses the **Kaggle CLI** and a personal API token to download the dataset.
+
+  1. Open the Kaggle website and navigate to your account settings: **Profile → Account**.
+
+  2. In the **API** section, click **Create New API Token**. 
+  A `kaggle.json` file containing your API credentials will be downloaded.
+
+  3. Place the `kaggle.json` file in the default Kaggle directory:
+
+    - **Windows:** `%USERPROFILE%\.kaggle\kaggle.json`
+    - **Linux / macOS:** `~/.kaggle/kaggle.json`
+
+  For Linux/macOS, file permissions must also be set:
+
+  ```
+  chmod 600 ~/.kaggle/kaggle.json
+  ```
+
+### 3) Data download and storage
+
+After configuring Kaggle API access, the dataset is downloaded automatically
+when model training is launched, or it can be downloaded manually in advance.
+
+By default, the following files are created in the project after download:
+
+- `data/raw/train.csv` — training dataset;
+- `data/raw/test.csv` — test dataset.
+
+If these files are already present locally, the download step is skipped.
 
 ---
 
-## Команды
+## Running the project
 
-### 0) Проверка что вы в корне проекта
-Вы должны находиться в папке, где лежат `src/`, `tests/`, `Dockerfile`.
+This section describes the standard workflow for using the project, 
+from dependency installation to model training and inference.
+All commands assume that you are located in the repository root directory.
 
----
+### 1) Dependency installation
 
-### 1) Установка зависимостей
+The project uses Python and a virtual environment.
+It is recommended to create a dedicated environment before installing dependencies.
 
 **Windows (PowerShell)**
 
@@ -262,130 +384,106 @@ source .venv/bin/activate
 pip install -r requirements-all.txt
 ```
 
-### 2) Запуск тестов
+### 2) Running tests
+
+Before starting model training, it is recommended to verify the installation and basic project functionality.
 
 ```
 pytest
 ```
 
-### 3) Обучение модели
+### 3) Model training
+
+Final model training is launched using the following command:
 
 ```
 python -m src.models.train
 ```
 
-Что происходит при обучении:
+During training:
 
-- данные скачиваются (если их ещё нет локально),
+- the dataset is automatically downloaded from Kaggle if not available locally;
+- a unified data preprocessing pipeline is constructed;
+- a LightGBM-based binary classifier is trained;
+- the classification threshold is selected under the specified business constraint
+- (target FPR, default `target_fpr = 0.20`);
+- the final model bundle is saved to `models/best_model.joblib`
+  (model, preprocessor, classification threshold, and metadata).
 
-- строится препроцессинг (OneHotEncoder для категориальных),
+### 4) Offline inference
 
-- обучается модель LightGBM,
-
-- подбирается порог классификации под целевой FPR (по умолчанию ```target_fpr = 0.20```),
-
-- сохраняется bundle в ```models/best_model.joblib``` (модель + препроцессор + threshold + meta).
-
-
-### 4) Предсказание
+After model training, inference can be performed on the test dataset:
 
 ```
 python -m src.models.predict
 ```
 
-Что получается на выходе:
+Results are saved to the `data/predictions/` directory and include:
 
-- ```data/predictions/submission_model.csv``` — вероятности (для сабмита)
+- a file with prediction probabilities (`data/predictions/submission_model.csv`);
 
-- ```data/predictions/decisions_model_thr_XXXX.csv``` — вероятности + бинарное решение по порогу
+- a file with probabilities and binary decisions based on the selected threshold
+(`data/predictions/decisions_model_thr_XXXX.csv`).
 
-### 5) Запуск API локально (без Docker)
+### 5) Running the API locally (without Docker)
+
+An HTTP API for online inference is available based on FastAPI:
 
 ```
 uvicorn src.api.app:app --host 0.0.0.0 --port 8000
 ```
 
-**Swagger:**
+**Swagger UI** is available at:
 
 http://127.0.0.1:8000/docs
 
-**Проверка, что модель загрузилась:**
+**Service readiness check** (whether the model is loaded):
 
 http://127.0.0.1:8000/ready
 
----
+### 6) MLflow — experiment management
 
-### MLflow
+MLflow is used during training to track and reproduce experiments.
 
-При обучении `train.py` логирует параметры, метрики и артефакты в MLflow.
+For each training run, MLflow logs:
 
-**Запуск UI:**
+- model and training parameters;
+- evaluation metrics;
+- model-related artifacts.
+
+To view experiment history and compare runs, the MLflow web interface can be launched:
 
 ```
 mlflow ui
 ```
 
-**Открыть:**
+By default, the interface is available at:
 
 http://127.0.0.1:5000
 
----
+### 7) API endpoints
 
-### API эндпоинты
+The HTTP API is designed for online model inference and is implemented using FastAPI.
 
-- `GET /health` — жив ли процесс
+Available endpoints:
 
-- `GET /ready` — загружена ли модель (bundle)
+- `GET /health` — service availability check;
+- `GET /ready` — model readiness check;
+- `GET /features` — list of expected input features;
+- `POST /predict` — inference for a single record;
+- `POST /predict_batch` — inference for a batch of records.
 
-- `GET /features` — список ожидаемых фичей
-
-- `POST /predict` — 1 запись
-
-- `POST /predict_batch` — много записей
-
-**Swagger:**
+Interactive documentation is available via **Swagger UI**:
 
 http://127.0.0.1:8000/docs
 
----
+#### Example API request
 
-### Docker (воспроизводимый запуск)
-
-1) Собрать образ
-
-```
-docker build -t loan-api:repro .
-```
-
-2) Запустить контейнер
-
-Папка `models/` не хранится в репозитории, поэтому её нужно “подмонтировать” в контейнер.
-
-**Windows (PowerShell)**
-
-```
-$models = (Resolve-Path .\models).Path; docker run --rm -p 8000:8000 -v "${models}:/app/models" loan-api:repro
-```
-
-**macOS / Linux**
-
-```
-docker run --rm -p 8000:8000 -v "$(pwd)/models:/app/models" loan-api:repro
-```
-
-**Swagger:**
-
-http://127.0.0.1:8000/docs
-
----
-
-### Пример запроса в API
-
-Сначала посмотри ожидаемые фичи:
+Before sending a request, the expected input features can be inspected via:
 
 - `GET /features`
 
-Пример:
+Example request for single-record inference:
 
 ```
 POST /predict
@@ -406,97 +504,133 @@ POST /predict
 }
 ```
 
+### 8) Docker — reproducible service execution
+
+A Docker environment is provided for isolated and reproducible service execution.
+
+Build the Docker image:
+
+```
+docker build -t loan-api:repro .
+```
+
+Run the container:
+
+The models/ directory is not stored in the repository and must be mounted into the container
+to provide the service with access to the trained model.
+
+**Windows (PowerShell)**
+
+Run the following two commands:
+
+```
+$models = (Resolve-Path .\models).Path
+docker run --rm -p 8000:8000 -v "${models}:/app/models" loan-api:repro
+```
+
+**macOS / Linux**
+
+```
+docker run --rm -p 8000:8000 -v "$(pwd)/models:/app/models" loan-api:repro
+```
+
+After startup, the API and Swagger UI are available at the same addresses as during local execution without Docker:
+
+http://127.0.0.1:8000/docs
+
+## 9) CI (GitHub Actions)
+
+A CI pipeline based on **GitHub Actions** is configured for the repository.
+
+The pipeline is automatically triggered on **push** and **pull request** events and performs the following steps:
+
+- dependency installation (from `requirements-ci.txt`);
+- test execution (`pytest`);
+- test coverage computation.
+
+The pipeline status is displayed in the badge at the top of the README.
+
 ---
 
-### CI (GitHub Actions)
+## Technologies used
 
-При push:
+The project employs a toolchain covering the full ML workflow,
+from exploratory data analysis to online inference and automated code validation.
 
-- ставятся зависимости из requirements-ci.txt,
+### ML pipeline and service layer (`src/`)
 
-- запускаются тесты,
+- **Language and core libraries**  
+  Python, pandas, numpy — data processing and numerical computation.
 
-- считается coverage.
+- **Machine learning and preprocessing**  
+  scikit-learn — data processing pipelines, feature encoding, dataset splitting, and evaluation metrics.
+
+- **Final model**  
+  LightGBM — gradient boosting for binary classification; training with cross-validation and early stopping,
+  handling of class imbalance.
+
+- **Model persistence and artifacts**  
+  joblib — storage of a unified model bundle (model, preprocessor, classification threshold, metadata).
+
+- **Logging and experiment tracking**  
+  logging — pipeline and service execution logging;
+  MLflow — tracking of parameters, metrics, and training artifacts.
+
+- **Testing and quality control**  
+  pytest, coverage / pytest-cov — automated testing of core logic and test coverage monitoring.
+
+- **Data acquisition**  
+  Kaggle CLI — automated dataset download.
+
+- **Inference service**  
+  FastAPI, Uvicorn — HTTP API for online predictions.
+
+- **Reproducibility and automation**  
+  Docker — isolated and reproducible service execution;
+  GitHub Actions — CI pipeline for automated code validation.
 
 ---
 
-## Используемые технологии
+### Exploratory analysis and experiments (`notebooks/`)
 
-### Основной ML-пайплайн (код в `src/`)
+The exploratory component applies multiple data analysis techniques and algorithm classes
+to investigate data structure, test hypotheses, and select the final solution.
 
-- **Язык и базовые библиотеки**  
-  Python, pandas, numpy;
+- **Data analysis and statistics**  
+  pandas, numpy, scipy — analysis of feature distributions, missing values, and target variable behavior, 
+  including statistical dependency tests (e.g., chi-square tests).
 
-- **Машинное обучение и препроцессинг**  
-  scikit-learn;  
-  единый пайплайн обработки данных, метрики, train / test split;
+- **Visualization and EDA**  
+  matplotlib, seaborn, plotly — visual analysis of distributions and class segmentation.
 
-- **Финальная модель**  
-  LightGBM;  
-  обучение, early stopping, работа с дисбалансом классов;
+- **Clustering (exploratory analysis)**  
+  KMeans, Gaussian Mixture Models (GMM) — investigation of data structure, 
+  selection of the number of clusters using silhouette score,
+  PCA visualization and analysis of target distribution within clusters.
 
-- **Сериализация и артефакты**  
-  joblib;  
-  сохранение модели, препроцессора и порога классификации;
-
-- **Тестирование и качество кода**  
-  pytest, coverage / pytest-cov;  
-  проверка ключевой логики и измерение покрытия тестами;
-
-- **Логирование и эксперименты**  
-  logging;  
-  MLflow для отслеживания параметров, метрик и артефактов;
-
-- **Получение данных**  
-  Kaggle CLI;  
-  автоматическая загрузка исходных данных;
-
-- **Сервис для инференса**  
-  FastAPI, Uvicorn;  
-  HTTP API для онлайн-предсказаний;
-
-- **Воспроизводимость и автоматизация**  
-  Docker;  
-  CI (GitHub Actions) для автоматической проверки кода при push.
-
-
-### Эксперименты и анализ в ноутбуке
-
-В исследовательской части проекта использовались различные методы анализа данных
-и классы алгоритмов для изучения структуры данных, проверки гипотез
-и выбора финального решения.
-
-- **Анализ данных и статистика**  
-  pandas, numpy, scipy;  
-  анализ распределений признаков, пропусков и целевой переменной,  
-  проверка статистических зависимостей между категориальными признаками и таргетом (chi-square).
-
-- **Визуализация и EDA**  
-  matplotlib, seaborn, plotly;  
-  визуальный анализ распределений, сравнение классов и категорий.
-
-- **Кластеризация (исследовательский анализ)**  
-  KMeans, Gaussian Mixture Models (GMM);  
-  подбор числа кластеров по silhouette score,  
-  PCA-визуализация кластерной структуры и анализ распределения таргета внутри кластеров.
-
-- **Линейные модели**  
+- **Linear models**  
   Logistic Regression.
 
-- **Методы на расстояниях и разделяющих поверхностях**  
+- **Distance- and margin-based methods**  
   K-Nearest Neighbors, Support Vector Machines.
 
-- **Вероятностные модели**  
+- **Probabilistic models**  
   Naive Bayes.
 
-- **Деревья и ансамбли (bagging)**  
+- **Decision trees and ensemble methods**  
   Random Forest.
 
-- **Градиентный бустинг**  
+- **Gradient boosting**  
   XGBoost, CatBoost, LightGBM.
 
-- **Нейронные сети**  
-  fully-connected neural network (MLP).
+- **Neural networks**  
+  Полносвязная нейронная сеть (MLP).
 
-- **Инфраструктура экспериментов**  
+- **Experimentation environment**  
   Jupyter Notebook.
+
+---
+
+## License
+
+This project is licensed under the MIT License.

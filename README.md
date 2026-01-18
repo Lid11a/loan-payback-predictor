@@ -589,8 +589,6 @@ from exploratory data analysis to online inference and automated code validation
   Docker — isolated and reproducible service execution;
   GitHub Actions — CI pipeline for automated code validation.
 
----
-
 ### Exploratory analysis and experiments (`notebooks/`)
 
 The exploratory component applies multiple data analysis techniques and algorithm classes

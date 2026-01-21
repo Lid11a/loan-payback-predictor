@@ -2,19 +2,82 @@
 
 # Loan Payback Prediction
 
+---
+
 A binary classification machine learning project focused on predicting **whether a client will repay a loan** 
 based on their profile and financial characteristics.
 
-This repository demonstrates the **full lifecycle of an ML project**:
-
-1) in-depth exploratory data analysis and model experimentation in a Jupyter Notebook;  
-2) selection of a final solution under explicit business constraints (target FPR);  
-3) transition from research results to a reproducible, production-style ML service.
-
-The project includes reproducible training and inference, MLflow experiment tracking, automated tests, CI,
-a FastAPI-based inference API, Dockerized deployment, and offline feature drift monitoring (PSI).
-
 **Languages:** [English](README.md) | [Русский](README_RU.md)
+
+---
+
+## Quick start
+
+This project provides a reproducible training pipeline and an HTTP API for online inference.
+
+**Prerequisites:**
+
+- Python 3.8+ (tested on Python 3.12)
+- Docker (optional, for containerized API run)
+
+### 1) Clone the repository
+
+```
+git clone https://github.com/lid11a/loan-payback-predictor.git
+cd loan-payback-predictor
+```
+
+### 2) Configure Kaggle API token (one-time setup)
+
+- **Windows:** `%USERPROFILE%\.kaggle\kaggle.json`
+- **Linux / macOS:** `~/.kaggle/kaggle.json`
+
+For Linux/macOS, file permissions must also be set:
+
+```
+ chmod 600 ~/.kaggle/kaggle.json
+```
+
+### 3) Create a virtual environment and install dependencies
+
+**Windows (PowerShell)**
+
+```
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements-all.txt
+```
+
+**macOS / Linux**
+
+```
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-all.txt
+```
+
+### 4) Train the model
+
+```
+python -m src.models.train
+```
+
+### 5) Run the API locally (without Docker)
+
+```
+uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+```
+
+**Swagger UI** is available at:
+
+http://127.0.0.1:8000/docs
+
+Before sending a request, the expected input features can be inspected via `GET /features`,
+and allowed values for categorical features are available via `GET /features/schema`.
+
+Example request for single-record inference: [Example API request](#example-api-request).
+
+To stop the API, press `Ctrl+C`.
 
 ---
 
@@ -359,9 +422,11 @@ If these files are already present locally, the download step is skipped.
 
 ## Running the project
 
-This section describes the standard workflow for using the project, 
-from dependency installation to model training and inference.
-All commands assume that you are located in the repository root directory.
+This section describes the standard workflow for working with the project, 
+from dependency installation to model training and inference. 
+All commands are executed from the repository root directory. 
+Before getting started, Kaggle API access must be configured and the dataset downloaded 
+as described in the **Data** section.
 
 ### 1) Dependency installation
 
@@ -441,27 +506,7 @@ http://127.0.0.1:8000/docs
 
 http://127.0.0.1:8000/ready
 
-### 6) MLflow — experiment management
-
-MLflow is used during training to track and reproduce experiments.
-
-For each training run, MLflow logs:
-
-- model and training parameters;
-- evaluation metrics;
-- model-related artifacts.
-
-To view experiment history and compare runs, the MLflow web interface can be launched:
-
-```
-mlflow ui
-```
-
-By default, the interface is available at:
-
-http://127.0.0.1:5000
-
-### 7) API endpoints
+### 6) API endpoints
 
 The HTTP API is designed for online model inference and is implemented using FastAPI.
 
@@ -479,9 +524,8 @@ http://127.0.0.1:8000/docs
 
 #### Example API request
 
-Before sending a request, the expected input features can be inspected via:
-
-- `GET /features`
+Before sending a request, the expected input features can be inspected via `GET /features`,
+and allowed values for categorical features are available via `GET /features/schema`.
 
 Example request for single-record inference:
 
@@ -504,17 +548,44 @@ POST /predict
 }
 ```
 
+### 7) MLflow — experiment management
+
+MLflow is used during training to track and reproduce experiments.
+
+For each training run, MLflow logs:
+
+- model and training parameters;
+- evaluation metrics;
+- model-related artifacts.
+
+To view experiment history and compare runs, the MLflow web interface can be launched:
+
+```
+mlflow ui
+```
+
+By default, the interface is available at:
+
+http://127.0.0.1:5000
+
 ### 8) Docker — reproducible service execution
 
 A Docker environment is provided for isolated and reproducible service execution.
 
-Build the Docker image:
+#### Build the Docker image
+
+Building the Docker image requires access to Docker Hub
+(to download the base image `python:3.12-slim`):
 
 ```
-docker build -t loan-api:repro .
+docker build -t loan-api .
 ```
 
-Run the container:
+In restricted network environments (e.g. corporate networks or limited ISP access),
+Docker image build may fail due to unavailable access to Docker Hub.
+In this case, the API can be run locally without Docker.
+
+#### Run the container
 
 The models/ directory is not stored in the repository and must be mounted into the container
 to provide the service with access to the trained model.
@@ -525,13 +596,13 @@ Run the following two commands:
 
 ```
 $models = (Resolve-Path .\models).Path
-docker run --rm -p 8000:8000 -v "${models}:/app/models" loan-api:repro
+docker run --rm -p 8000:8000 -v "${models}:/app/models" loan-api
 ```
 
 **macOS / Linux**
 
 ```
-docker run --rm -p 8000:8000 -v "$(pwd)/models:/app/models" loan-api:repro
+docker run --rm -p 8000:8000 -v "$(pwd)/models:/app/models" loan-api
 ```
 
 After startup, the API and Swagger UI are available at the same addresses as during local execution without Docker:

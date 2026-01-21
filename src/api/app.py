@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List
 
+import json
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
@@ -13,6 +14,8 @@ from pydantic import BaseModel, Field
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+SCHEMA_PATH = Path("models/feature_schema.json")
 
 # Global variables for the loaded model bundle
 BUNDLE: Dict[str, Any] | None = None
@@ -279,4 +282,16 @@ def predict_batch(req: PredictBatchRequest) -> PredictBatchResponse:
         for p in probas
     ]
 
-    return PredictBatchResponse(results = results)
+    return PredictBatchResponse(results=results)
+
+
+@app.get("/features/schema")
+def get_feature_schema():
+    if not SCHEMA_PATH.exists():
+        raise HTTPException(
+            status_code=500,
+            detail="Feature schema not found. Run: python -m src.utils.build_feature_schema",
+        )
+    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+
+

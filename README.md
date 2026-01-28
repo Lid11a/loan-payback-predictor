@@ -11,13 +11,25 @@ based on their profile and financial characteristics.
 
 ---
 
+## Project snapshot
+
+- End-to-end credit scoring with exploratory and statistical analysis, model benchmarking, and final model selection  
+- LightGBM-based solution built on a unified preprocessing pipeline ensuring consistency between training and inference  
+- ROC-AUC optimization with FPR-constrained threshold selection under an explicit business requirement  
+- MLflow-based experiment tracking and structured logging for reproducible and observable training workflows  
+- FastAPI-based inference service for online predictions with validated input schemas  
+- Offline feature drift monitoring using Population Stability Index (PSI)  
+- Automated testing and CI pipeline (GitHub Actions) for code quality and regression prevention
+
+---
+
 ## Quick start
 
 This project provides a reproducible training pipeline and an HTTP API for online inference.
 
 **Prerequisites:**
 
-- Python 3.8+ (tested on Python 3.12)
+- Python 3.9+ (tested on Python 3.12)
 - Docker (optional, for containerized API run)
 
 ### 1) Clone the repository
@@ -354,7 +366,8 @@ loan_py/
 ├── .gitignore                   # Git exclusions
 ├── Dockerfile                   # Docker image for the API
 ├── pyproject.toml               # Project and tool configuration
-├── README.md                    # Project description
+├── README.md                    # Project description (EN)
+├── README_RU.md                 # Project description (RU)
 ├── LICENSE                      # Project license
 ├── requirements-all.txt         # Full dependency list
 └── requirements-ci.txt          # CI dependencies
@@ -631,72 +644,72 @@ from exploratory data analysis to online inference and automated code validation
 ### ML pipeline and service layer (`src/`)
 
 - **Language and core libraries**  
-  Python, pandas, numpy — data processing and numerical computation.
+  Python, pandas, numpy — data processing and numerical computation
 
 - **Machine learning and preprocessing**  
-  scikit-learn — data processing pipelines, feature encoding, dataset splitting, and evaluation metrics.
+  scikit-learn — data processing pipelines, feature encoding, dataset splitting, and evaluation metrics
 
 - **Final model**  
   LightGBM — gradient boosting for binary classification; training with cross-validation and early stopping,
-  handling of class imbalance.
+  handling of class imbalance
 
 - **Model persistence and artifacts**  
-  joblib — storage of a unified model bundle (model, preprocessor, classification threshold, metadata).
+  joblib — storage of a unified model bundle (model, preprocessor, classification threshold, metadata)
 
 - **Logging and experiment tracking**  
   logging — pipeline and service execution logging;
-  MLflow — tracking of parameters, metrics, and training artifacts.
+  MLflow — tracking of parameters, metrics, and training artifacts
 
 - **Testing and quality control**  
-  pytest, coverage / pytest-cov — automated testing of core logic and test coverage monitoring.
+  pytest, coverage / pytest-cov — automated testing of core logic and test coverage monitoring
 
 - **Data acquisition**  
-  Kaggle CLI — automated dataset download.
+  Kaggle CLI — automated dataset download
 
 - **Inference service**  
-  FastAPI, Uvicorn — HTTP API for online predictions.
+  FastAPI, Uvicorn — HTTP API for online predictions
 
 - **Reproducibility and automation**  
   Docker — isolated and reproducible service execution;
-  GitHub Actions — CI pipeline for automated code validation.
+  GitHub Actions — CI pipeline for automated code validation
 
 ### Exploratory analysis and experiments (`notebooks/`)
 
 The exploratory component applies multiple data analysis techniques and algorithm classes
-to investigate data structure, test hypotheses, and select the final solution.
+to investigate data structure, test hypotheses, and select the final solution
 
 - **Data analysis and statistics**  
   pandas, numpy, scipy — analysis of feature distributions, missing values, and target variable behavior, 
-  including statistical dependency tests (e.g., chi-square tests).
+  including statistical dependency tests (e.g., chi-square tests)
 
 - **Visualization and EDA**  
-  matplotlib, seaborn, plotly — visual analysis of distributions and class segmentation.
+  matplotlib, seaborn, plotly — visual analysis of distributions and class segmentation
 
 - **Clustering (exploratory analysis)**  
   KMeans, Gaussian Mixture Models (GMM) — investigation of data structure, 
   selection of the number of clusters using silhouette score,
-  PCA visualization and analysis of target distribution within clusters.
+  PCA visualization and analysis of target distribution within clusters
 
 - **Linear models**  
-  Logistic Regression.
+  Logistic Regression
 
 - **Distance- and margin-based methods**  
-  K-Nearest Neighbors, Support Vector Machines.
+  K-Nearest Neighbors, Support Vector Machines
 
 - **Probabilistic models**  
-  Naive Bayes.
+  Naive Bayes
 
 - **Decision trees and ensemble methods**  
-  Random Forest.
+  Random Forest
 
 - **Gradient boosting**  
-  XGBoost, CatBoost, LightGBM.
+  XGBoost, CatBoost, LightGBM
 
 - **Neural networks**  
-  Полносвязная нейронная сеть (MLP).
+  Полносвязная нейронная сеть (MLP)
 
 - **Experimentation environment**  
-  Jupyter Notebook.
+  Jupyter Notebook
 
 ---
 

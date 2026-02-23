@@ -267,7 +267,7 @@ http://127.0.0.1:8000/docs
 - загрузка и чтение данных (`test_download.py`, `test_load.py`);
 - препроцессинг и подготовка признаков (`test_preprocessing.py`);
 - подбор и применение порога классификации (`test_threshold.py`);
-- сценарии CLI-инференса (`test_predict.py`);
+- запуск предсказаний через CLI (`test_predict.py`);
 - корректность работы API-эндпоинтов (`test_api.py`);
 - мониторинг дрифта признаков (`test_drift.py`);
 - настройка логирования и вспомогательные функции (`test_logger_setup.py`, `test_utils.py`).

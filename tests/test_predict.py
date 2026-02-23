@@ -1,4 +1,4 @@
-# tests/test_predict_cli.py
+# tests/test_predict.py
 from src.models.predict import resolve_model_path
 
 

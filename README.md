@@ -13,13 +13,13 @@ based on their profile and financial characteristics.
 
 ## Project snapshot
 
-- End-to-end credit scoring with exploratory and statistical analysis, model benchmarking, and final model selection  
-- LightGBM-based solution built on a unified preprocessing pipeline ensuring consistency between training and inference  
-- ROC-AUC optimization with FPR-constrained threshold selection under an explicit business requirement  
-- MLflow-based experiment tracking and structured logging for reproducible and observable training workflows  
-- FastAPI-based inference service for online predictions with validated input schemas  
-- Offline feature drift monitoring using Population Stability Index (PSI)  
-- Automated testing and CI pipeline (GitHub Actions) for code quality and regression prevention
+End-to-end credit scoring system for tabular data — from exploratory and statistical analysis to model training, deployment, and monitoring.
+- LightGBM-based classification model selected through benchmarking, with early stopping and FPR-based threshold selection aligned with business requirements
+- Shared preprocessing pipeline used for both training and inference to ensure consistent feature transformations
+- MLflow-based experiment tracking and structured logging for reproducible training
+- Dockerized FastAPI service for online predictions
+- Offline feature drift monitoring using Population Stability Index (PSI)
+- Automated tests for core logic and API endpoints (pytest) with CI via GitHub Actions
 
 ---
 
@@ -118,20 +118,17 @@ from research insights to an engineering-oriented ML solution suitable for pract
 
 The project includes:
 
-- exploratory data analysis, including analysis of feature distributions, target variable behavior, 
-  and the structure of factors influencing loan default risk;
-- statistical analysis and hypothesis testing used to interpret data patterns
-  and compare statistical findings with model behavior;
+- exploratory and statistical analysis of feature distributions, their relationship with the target variable, 
+  and clustering to identify structural patterns in the data;
 - experimental comparison of different model families and training approaches;
 - selection of a final solution under an explicit business constraint
-  (classification threshold selection based on a target FPR);
-- implementation of a reproducible ML pipeline
-  with shared preprocessing and strict train/inference consistency;
-- implementation of training and inference workflows with experiment tracking via MLflow;
-- implementation of an HTTP API for online inference based on FastAPI;
-- setup of automated testing and CI to ensure code correctness;
-- implementation of reproducible service execution using Docker;
-- implementation of offline feature drift monitoring (PSI) to track input data stability.
+  (classification threshold selection based on a target FPR); 
+- development of a reproducible ML pipeline with shared preprocessing for training and inference; 
+- MLflow-based experiment tracking and structured logging; 
+- development of an HTTP API for online inference using FastAPI;
+- service containerization with Docker;
+- automated test coverage for core logic and API endpoints, with CI configuration;
+- offline feature drift monitoring (PSI) to track input data stability.
 
 The project is presented in a structured manner, covering the exploratory phase,
 the production-style implementation, and the supporting components that ensure reproducibility and quality control.
@@ -167,8 +164,7 @@ and to validate patterns identified during EDA.
 This includes:
 
 - statistical tests for dependency between categorical features and the target;
-- interpretation of statistical significance;
-- comparison of statistical relevance with model-based feature importance.
+- interpretation of statistical significance.
 
 ### Data structure exploration
 
@@ -270,7 +266,7 @@ Tests validate:
 - data download and loading (`test_download.py`, `test_load.py`);
 - preprocessing and feature preparation (`test_preprocessing.py`);
 - threshold selection and application (`test_threshold.py`);
-- CLI inference workflows (`test_predict_cli.py`);
+- CLI inference workflows (`test_predict.py`);
 - API endpoint behavior (`test_api.py`);
 - feature drift monitoring logic (`test_drift.py`);
 - logging setup and utility functions (`test_logger_setup.py`, `test_utils.py`).
@@ -356,7 +352,7 @@ loan_py/
 │ ├── test_drift.py             # Drift monitoring module tests
 │ ├── test_load.py              # Data loading tests
 │ ├── test_logger_setup.py      # Logging configuration tests
-│ ├── test_predict_cli.py       # CLI inference tests
+│ ├── test_predict.py           # Inference module tests
 │ ├── test_preprocessing.py     # Preprocessing tests
 │ ├── test_threshold.py         # Threshold selection logic tests
 │ └── test_utils.py             # Utility function tests

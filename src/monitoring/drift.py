@@ -20,16 +20,6 @@ logger = get_logger(__name__)
 _EPS = 1e-12
 
 
-def _safe_ratio(a: float, b: float) -> float:
-    """
-    Compute a / b in a numerically safe way.
-
-    A small epsilon is added to the denominator to avoid
-    division by zero and unstable values when b is close to zero.
-    """
-    return float(a) / float(b + _EPS)
-
-
 def _psi_from_distributions(ref: np.ndarray, cur: np.ndarray) -> float:
     """
     PSI = sum( (cur - ref) * ln(cur/ref) )

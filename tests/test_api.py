@@ -108,6 +108,7 @@ def test_predict_batch_ok(client: TestClient) -> None:
     assert len(data["results"]) == 2
     assert data["results"][0]["threshold"] == 0.5
 
+
 def test_predict_batch_empty_items(client):
     r = client.post("/predict_batch", json = {"items": []})
     assert r.status_code == 400

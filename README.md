@@ -23,6 +23,18 @@ End-to-end credit scoring system for tabular data — from exploratory and stati
 
 ---
 
+## Results at a glance
+
+| Metric | Value |
+|:--|:--|
+| Final model | LightGBM |
+| ROC-AUC | **0.92** |
+| Target FPR | **≤ 0.20** |
+| Precision | **0.94** |
+| Recall | **0.91** |
+
+---
+
 ## Quick start
 
 This project provides a reproducible training pipeline and an HTTP API for online inference.

@@ -370,6 +370,13 @@ loan_py/
 │ └── test_utils.py             # Utility function tests
 ├── notebooks/                  # Exploratory analysis
 │ └── loan_payback_predictor.ipynb  # EDA, experiments, final model selection
+├── data/                           # data and predictions (generated locally)
+│   ├── raw/                        # train.csv / test.csv downloaded via Kaggle CLI
+│   └── predictions/                # batch inference outputs
+├── models/                         # saved model artifacts (generated locally)
+├── reports/                        # monitoring reports (e.g., drift_report.csv)
+├── logs/                           # pipeline and API logs
+├── mlruns/                         # MLflow experiment tracking data
 ├── .dockerignore                # Docker build exclusions
 ├── .gitignore                   # Git exclusions
 ├── Dockerfile                   # Docker image for the API

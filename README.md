@@ -13,7 +13,7 @@ based on their profile and financial characteristics.
 
 ## Project snapshot
 
-End-to-end credit scoring system for tabular data — from exploratory and statistical analysis to model training, deployment, and monitoring.
+A project covering the full machine learning workflow for credit scoring — from exploratory and statistical analysis to a reproducible training pipeline, an inference service, and offline monitoring.
 - LightGBM-based classification model selected through benchmarking, with early stopping and FPR-based threshold selection aligned with business requirements
 - Shared preprocessing pipeline used for both training and inference to ensure consistent feature transformations
 - MLflow-based experiment tracking and structured logging for reproducible training
